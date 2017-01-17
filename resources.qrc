@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/plugins/RiverMetrics" >
+        <file>icon_new.png</file>
+        <file>valid.png</file>
+    </qresource>
+</RCC>
