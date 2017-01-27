@@ -61,6 +61,14 @@ class RiverMetricsDockWidget(QtGui.QDockWidget, FORM_CLASS):
 
         #global variables
         self.validate_test = None
+        self.graphicState = False
+        self.canvas = None
+        self.figure = None
+        self.breaks = [] # breaks of river axes
+        self.breakButton = QtGui.QPushButton('Add breaks')
+        self.breakButton.setCheckable(True)
+        self.breakButton.clicked.connect(self.addBreaks)
+
 
 
 
@@ -115,9 +123,23 @@ class RiverMetricsDockWidget(QtGui.QDockWidget, FORM_CLASS):
                                  str(round(len/1000,2)) + ' km', 'yellow')
                     self.validate_test = False
 
+        #TODO -- add validate CRS layer to be not a geographic
 
+    def clearLayout(self,layout):
+        '''
+        clera layout function
+        :return:
+        '''
+        while layout.count():
+            child = layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
 
     def graph_data(self):
+        if self.graphicState is True:
+            self.canvas = None
+            self.figure = None
+            self.clearLayout(self.layout)
         step = self.stepSpin.value()
         shif = self.shiftSpin.value()
         if self.validate_test == None:
@@ -130,13 +152,48 @@ class RiverMetricsDockWidget(QtGui.QDockWidget, FORM_CLASS):
                 x,y = sinuosity(the_geom,step ,shif)
 
         #create a new empty QVboxLayout
-        layout = QtGui.QVBoxLayout()
+        self.layout = QtGui.QVBoxLayout()
+
         #set the Qframe layout
-        self.frame_for_plot.setLayout(layout)
-        figure = plt.figure()
-        canvas = FigureCanvas(figure)
-        layout.addWidget(canvas)
-        ax = figure.add_subplot(111)
+        self.frame_for_plot.setLayout(self.layout)
+        self.figure = plt.figure()
+        self.canvas = FigureCanvas(self.figure)
+        self.layout.addWidget(self.canvas)
+        self.layout.addWidget(self.breakButton)
+        ax = self.figure.add_subplot(111)
         ax.plot(x, y, 'bo', x, y, 'k')
-        canvas.draw()
+
+
+        #def addVline():
+        #if breakButton.isChecked():
+         #       figure.canvas.mpl_connect('button_press_event', OnClick)
+
+        self.canvas.show()
+        #set variable graphState to true to remember graph is plotted
+        self.graphicState=True
+
+    def addBreaks(self):
+
+        def OnClick(event):
+            ax=self.figure.add_subplot(111)
+            ax.axvline(event.xdata,linewidth=4, color='r')
+            self.canvas.draw()
+            self.breaks.append(float(event.xdata))
+
+        if self.graphicState is True:
+            if self.breakButton.isChecked():
+                self.breakButton.setText('stop-break')
+                self.cid = self.figure.canvas.mpl_connect('button_press_event', OnClick)
+            #TODO
+            else:
+                self.breakButton.setText('Add Break')
+                self.figure.canvas.mpl_disconnect(self.cid)
+        else:
+            self.message('You have to graph your data first','yellow')
+
+
+
+
+
+
 

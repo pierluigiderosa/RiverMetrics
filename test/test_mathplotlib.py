@@ -1,5 +1,5 @@
 from matplotlib import pyplot as plt
-
+import numpy as np
 class LineBuilder:
     def __init__(self, line):
         self.line = line
@@ -13,7 +13,7 @@ class LineBuilder:
         self.xs.append(event.xdata)
         self.ys.append(event.ydata)
         self.line.set_data(self.xs, self.ys)
-        self.line.axvline(x=event.xdata, visible=True)
+        #self.line.axvline(x=event.xdata, visible=True)
         self.line.figure.canvas.draw()
 
 fig = plt.figure()
