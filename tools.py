@@ -26,7 +26,8 @@ from qgis._core import (QgsFeature, QgsGeometry,
 from math import sqrt
 from PyQt4.QtCore import QVariant
 
-def pointAtDist(geom,distance):
+
+def pointAtDist(geom, distance):
     length = geom.length()
     if distance < length:
         point = geom.interpolate(distance)
@@ -40,15 +41,10 @@ def qgisdist(point1, point2):
     point2 = point2.asPoint()
     return sqrt(point1.sqrDist(point2))
 
-def directSinuosity(geom,pt1_station,pt2_station):
-    startPoint = pointAtDist(geom,pt1_station)
-    endPoint = pointAtDist(geom,pt2_station)
-    distance = qgisdist(startPoint,endPoint)
-    length_reach = pt2_station-pt1_station
-    return length_reach/distance
 
 
-def sinuosity(geom,step,shift):
+
+def sinuosity(geom, step, shift):
     '''
 
     :param geom: QGis geometry type
@@ -58,44 +54,75 @@ def sinuosity(geom,step,shift):
     '''
     initStation = 0
     endStation = step
-    midStation = step/2.
+    midStation = step / 2.
     riverLeng = geom.length()
     Xval = []
     Yval = []
 
-    #TODO this line for debug
+    # TODO this line for debug
     f = open('/tmp/workfile.csv', 'w')
 
     while endStation <= riverLeng:
-        startPoint = pointAtDist(geom,initStation)
-        endPoint = pointAtDist(geom,endStation)
-        distance = qgisdist(startPoint,endPoint)
-        sinuosity = step/distance
-        Xval.append(midStation,)
+        startPoint = pointAtDist(geom, initStation)
+        endPoint = pointAtDist(geom, endStation)
+        distance = qgisdist(startPoint, endPoint)
+        sinuosity = step / distance
+        Xval.append(midStation, )
         Yval.append(sinuosity)
         # TODO this line for debug
-        f.write(str(midStation)+','+str(sinuosity)+'\n')
+        f.write(str(midStation) + ',' + str(sinuosity) + '\n')
         initStation += shift
         endStation += shift
         midStation += shift
-    return Xval,Yval
+    return Xval, Yval
 
-def createMemLayer():
+
+def splitLine(line, ptInit, ptEnd):
+    puntoInit = ptInit.asPoint()
+    puntoEnd = ptEnd.asPoint()
+    sqrDistInit, minDistPointInit, afterVertexInit = line.closestSegmentWithContext(puntoInit)
+    sqrDistEnd, minDistPointEnd, afterVertexEnd = line.closestSegmentWithContext(puntoEnd)
+    pline = line.asPolyline()
+    newPoints = []
+    newPoints.append(minDistPointInit)
+    for iter in range(afterVertexInit, afterVertexEnd):
+        newPoints.append(pline[iter])
+    newPoints.append(minDistPointEnd)
+    return newPoints
+
+
+
+def createMemLayer(line,breaksList):
+    '''
+    create memopty layer storing all reaches
+    :return:
+    '''
     # create layer
-    vl = QgsVectorLayer("LineString", "temporary_river", "memory")
+    vl = QgsVectorLayer("LineString", "sinuosity_river", "memory")
     pr = vl.dataProvider()
     # add fields
-    pr.addAttributes([QgsField("reach", QVariant.String),
+    pr.addAttributes([QgsField("reach", QVariant.Int),
                       QgsField("sinuosity", QVariant.Double),
-                      QgsField("size", QVariant.Int)])
-    vl.updateFields()  # tell the vector layer to fetch changes from the provider
-
-    # add a feature
-    fet = QgsFeature()
-    fet.setGeometry(QgsGeometry.fromPoint(QgsPoint(10, 10)))
-    fet.setAttributes(["Johny", 2, 0.3])
-    pr.addFeatures([fet])
-
-    # update layer's extent when new features have been added
-    # because change of extent in provider is not propagated to the layer
-    vl.updateExtents()
+                      QgsField("Length", QVariant.Double)])
+    vl.updateFields()
+    # create breaks with initial and final
+    bk=sorted(breaksList)
+    bk.insert(0, 0)
+    bk.append(line.length())
+    for breack in range(1,len(bk)):
+        #ptInit = pointAtDist(line,breaksList[breack-1])
+        ptInt = line.interpolate(bk[breack-1])
+        #ptFin = pointAtDist(line,breaksList[breack])
+        ptFin = line.interpolate(bk[breack])
+        reach = splitLine(line,ptInt,ptFin)
+        # sinuosity calc
+        dist=qgisdist(ptInt,ptFin)
+        lenReach=bk[breack]-bk[breack-1]
+        # add a feature
+        fet = QgsFeature()
+        fet.setGeometry(QgsGeometry.fromPolyline(reach))
+        fet.setAttributes([breack, lenReach/dist, str(lenReach)])
+        pr.addFeatures([fet])
+    #vl.updateExtents()
+    vl.commitChanges()
+    return vl

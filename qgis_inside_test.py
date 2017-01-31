@@ -2,6 +2,7 @@ vlayer = QgsVectorLayer('/home/pierluigi/UNIVERSITA/frane_alveo_regione/pianure/
 f = open('/tmp/workfile.csv', 'w')
 #QgsMapLayerRegistry.instance().addMapLayer(vlayer)
 from math import sqrt
+from PyQt4.QtCore import QVariant
     
 def pointAtDist(geom,distance):
     length = geom.length()
@@ -49,3 +50,51 @@ for feat in vlayer.getFeatures():
     # do something with the feature
     the_geom = feat.geometry()
     sinuosity(the_geom,5000,500)
+    
+    
+vfeat=vlayer.selectedFeatures()[0]
+line=vfeat.geometry()
+
+punto10mila=line.interpolate(10000)
+punto20mila=line.interpolate(20000)
+
+def splitLine(line,ptInit,ptEnd):
+    puntoInit = ptInit.asPoint()
+    puntoEnd = ptEnd.asPoint()
+    sqrDistInit, minDistPointInit, afterVertexInit  = line.closestSegmentWithContext(puntoInit)
+    sqrDistEnd, minDistPointEnd, afterVertexEnd  = line.closestSegmentWithContext(puntoEnd)
+    #afterVertexEnd -=1
+    pline = line.asPolyline()
+    newPoints = []
+    newPoints.append(minDistPointInit)
+    for iter in range(afterVertexInit,afterVertexEnd):
+        newPoints.append(pline[iter])
+    newPoints.append(minDistPointEnd)
+    #metto tutto in featire
+    reach =  QgsVectorLayer('LineString', 'line' , "memory")
+    pr = reach.dataProvider() 
+    reachFeat = QgsFeature()
+    reachFeat.setGeometry(QgsGeometry.fromPolyline(newPoints))
+    pr.addFeatures([reachFeat])
+    reach.updateExtents()
+    QgsMapLayerRegistry.instance().addMapLayers([reach])
+    
+    
+def plottapunto(punto):
+    vl = QgsVectorLayer("Point", "temporary_points", "memory")
+    pr = vl.dataProvider()
+    # add fields
+    pr.addAttributes([QgsField("name", QVariant.String)])
+    vl.updateFields() # tell the vector layer to fetch changes from the provider
+    # add a feature
+    fet = QgsFeature()
+    fet.setGeometry(punto)
+    fet.setAttributes(["Johny"])
+    pr.addFeatures([fet])
+    # update layer's extent when new features have been added
+    # because change of extent in provider is not propagated to the layer
+    vl.updateExtents()
+    QgsMapLayerRegistry.instance().addMapLayer(vl)
+
+plottapunto(punto10mila)
+

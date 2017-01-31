@@ -34,7 +34,7 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
 #    os.path.dirname(__file__), 'river_metrics_dockwidget_base.ui'))
 from qgis._core import QgsMapLayer,QGis
 from qgis._core import QgsMapLayerRegistry
-from tools import sinuosity
+from tools import sinuosity,createMemLayer
 
 # import mathplotlib libraries
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
@@ -65,6 +65,7 @@ class RiverMetricsDockWidget(QtGui.QDockWidget, FORM_CLASS):
         self.canvas = None
         self.figure = None
         self.breaks = [] # breaks of river axes
+        self.line= None # line geometry
         self.breakButton = QtGui.QPushButton('Add breaks')
         self.breakButton.setCheckable(True)
         self.breakButton.clicked.connect(self.addBreaks)
@@ -109,6 +110,7 @@ class RiverMetricsDockWidget(QtGui.QDockWidget, FORM_CLASS):
             self.validate_test = False
         else:
             self.validate_test = True
+            self.message(vlayer.name()+' is valid','white')
 
         if vlayer.featureCount() > 1:
             self.message('You have more then one feature on your vector layer','yellow')
@@ -150,27 +152,30 @@ class RiverMetricsDockWidget(QtGui.QDockWidget, FORM_CLASS):
             for feat in vlayer.getFeatures():
                 the_geom = feat.geometry()
                 x,y = sinuosity(the_geom,step ,shif)
+                self.line = the_geom
 
-        #create a new empty QVboxLayout
-        self.layout = QtGui.QVBoxLayout()
+            #create a new empty QVboxLayout
+            self.layout = QtGui.QVBoxLayout()
 
-        #set the Qframe layout
-        self.frame_for_plot.setLayout(self.layout)
-        self.figure = plt.figure()
-        self.canvas = FigureCanvas(self.figure)
-        self.layout.addWidget(self.canvas)
-        self.layout.addWidget(self.breakButton)
-        ax = self.figure.add_subplot(111)
-        ax.plot(x, y, 'bo', x, y, 'k')
+            #set the Qframe layout
+            self.frame_for_plot.setLayout(self.layout)
+            self.figure = plt.figure()
+            self.canvas = FigureCanvas(self.figure)
+            self.layout.addWidget(self.canvas)
+            self.layout.addWidget(self.breakButton)
+            ax = self.figure.add_subplot(111)
+            ax.plot(x, y, 'bo', x, y, 'k')
 
 
-        #def addVline():
-        #if breakButton.isChecked():
-         #       figure.canvas.mpl_connect('button_press_event', OnClick)
+            #def addVline():
+            #if breakButton.isChecked():
+             #       figure.canvas.mpl_connect('button_press_event', OnClick)
 
-        self.canvas.show()
-        #set variable graphState to true to remember graph is plotted
-        self.graphicState=True
+            self.canvas.show()
+            #set variable graphState to true to remember graph is plotted
+            self.graphicState=True
+
+            #self.graph.hide()
 
     def addBreaks(self):
 
@@ -184,14 +189,28 @@ class RiverMetricsDockWidget(QtGui.QDockWidget, FORM_CLASS):
             if self.breakButton.isChecked():
                 self.breakButton.setText('stop-break')
                 self.cid = self.figure.canvas.mpl_connect('button_press_event', OnClick)
-            #TODO
+            #TODO: create memory layer splitted with breaks
             else:
                 self.breakButton.setText('Add Break')
                 self.figure.canvas.mpl_disconnect(self.cid)
+                self.final()
+                #print self.breaks
+                # ll1 = createMemLayer(self.line, self.breaks)
+                # QgsMapLayerRegistry.instance().addMapLayers([ll1])
         else:
             self.message('You have to graph your data first','yellow')
 
+    def final(self):
 
+        index = self.vectorCombo.currentIndex()
+        vlayer = self.vectorCombo.itemData(index)
+        for feat in vlayer.getFeatures():
+            the_geom = feat.geometry()
+        #TODO: remove the line for debigging
+        #self.message(str(vlayer.name())+'|'+str(the_geom.length())+'|'+str(self.breaks), 'red')
+
+        ll1 = createMemLayer(the_geom, self.breaks)
+        QgsMapLayerRegistry.instance().addMapLayer(ll1)
 
 
 
