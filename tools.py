@@ -60,7 +60,7 @@ def sinuosity(geom, step, shift):
     Yval = []
 
     # TODO this line for debug
-    f = open('/tmp/workfile.csv', 'w')
+    #f = open('/tmp/workfile.csv', 'w')
 
     while endStation <= riverLeng:
         startPoint = pointAtDist(geom, initStation)
@@ -70,7 +70,7 @@ def sinuosity(geom, step, shift):
         Xval.append(midStation, )
         Yval.append(sinuosity)
         # TODO this line for debug
-        f.write(str(midStation) + ',' + str(sinuosity) + '\n')
+        #f.write(str(midStation) + ',' + str(sinuosity) + '\n')
         initStation += shift
         endStation += shift
         midStation += shift
@@ -94,7 +94,7 @@ def splitLine(line, ptInit, ptEnd):
 
 def createMemLayer(line,breaksList):
     '''
-    create memopty layer storing all reaches
+    create memory layer storing all reaches
     :return:
     '''
     # create layer
@@ -110,9 +110,7 @@ def createMemLayer(line,breaksList):
     bk.insert(0, 0)
     bk.append(line.length())
     for breack in range(1,len(bk)):
-        #ptInit = pointAtDist(line,breaksList[breack-1])
         ptInt = line.interpolate(bk[breack-1])
-        #ptFin = pointAtDist(line,breaksList[breack])
         ptFin = line.interpolate(bk[breack])
         reach = splitLine(line,ptInt,ptFin)
         # sinuosity calc
