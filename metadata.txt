@@ -8,7 +8,7 @@
 
 [general]
 name=RiverMetrics
-qgisMinimumVersion=2.0
+qgisMinimumVersion=2.12
 description=description
 version=0.1
 author=pierluigi de rosa
@@ -30,9 +30,9 @@ tags=river, vector
 
 homepage=
 category=Plugins
-icon=icon.png
+icon=icon_new.png
 # experimental flag
-experimental=False
+experimental=True
 
 # deprecated flag (applies to the whole plugin, not just a single version)
 deprecated=False

@@ -26,6 +26,9 @@ import os
 from PyQt4 import QtGui, uic
 from PyQt4.QtCore import pyqtSignal
 import sys
+
+from PyQt4.QtGui import QFileDialog
+
 sys.path.append(os.path.dirname(__file__))
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'river_metrics_dockwidget_base.ui'), resource_suffix='')
@@ -40,6 +43,7 @@ from tools import sinuosity,createMemLayer
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as NavigationToolbar
 import matplotlib.pyplot as plt
+import tempfile
 
 class RiverMetricsDockWidget(QtGui.QDockWidget, FORM_CLASS):
 
@@ -68,7 +72,18 @@ class RiverMetricsDockWidget(QtGui.QDockWidget, FORM_CLASS):
         self.line= None # line geometry
         self.breakButton = QtGui.QPushButton('Add breaks')
         self.breakButton.setCheckable(True)
+        self.Xcsv = None
+        self.Ycsv = None
         self.breakButton.clicked.connect(self.addBreaks)
+        self.browseBtn.clicked.connect(self.writeFile)
+
+        self.filecsvtemp = tempfile.NamedTemporaryFile(suffix='.csv')
+
+
+        self.filecsvpath = os.path.splitext(str(self.filecsvtemp.name))[0] + '.csv'
+        self.lineOutput.setText(self.filecsvpath)
+
+
 
 
 
@@ -126,10 +141,17 @@ class RiverMetricsDockWidget(QtGui.QDockWidget, FORM_CLASS):
                     self.validate_test = False
 
         #TODO -- add validate CRS layer to be not a geographic
+        crslayer=vlayer.crs().toProj4()
+        if 'proj=longlat' in crslayer:
+            self.validate_test = False
+            self.message('The layer crs is not projected','yellow')
+        if crslayer == '':
+            self.validate_test = True
+            self.message('warning:the crs seems missing','yellow')
 
     def clearLayout(self,layout):
         '''
-        clera layout function
+        clear layout function
         :return:
         '''
         while layout.count():
@@ -161,10 +183,14 @@ class RiverMetricsDockWidget(QtGui.QDockWidget, FORM_CLASS):
             self.frame_for_plot.setLayout(self.layout)
             self.figure = plt.figure()
             self.canvas = FigureCanvas(self.figure)
+            self.toolbar = NavigationToolbar(self.canvas, self)
             self.layout.addWidget(self.canvas)
+            self.layout.addWidget(self.toolbar)
             self.layout.addWidget(self.breakButton)
             ax = self.figure.add_subplot(111)
             ax.plot(x, y, 'bo', x, y, 'k')
+            self.Xcsv = x
+            self.Ycsv = y
 
 
             #def addVline():
@@ -174,6 +200,8 @@ class RiverMetricsDockWidget(QtGui.QDockWidget, FORM_CLASS):
             self.canvas.show()
             #set variable graphState to true to remember graph is plotted
             self.graphicState=True
+
+            self.writecsv()
 
             #self.graph.hide()
 
@@ -211,6 +239,20 @@ class RiverMetricsDockWidget(QtGui.QDockWidget, FORM_CLASS):
 
         ll1 = createMemLayer(the_geom, self.breaks)
         QgsMapLayerRegistry.instance().addMapLayer(ll1)
+
+    def writeFile(self):
+        fileName = QFileDialog.getSaveFileName(self, 'Save CSV file',
+                                               "", "CSV (*.csv);;All files (*)")
+        fileName = os.path.splitext(str(fileName))[0] + '.csv'
+        self.lineOutput.setText(fileName)
+
+    def writecsv(self):
+        filecsv = open(self.lineOutput.text(),'w')
+        filecsv.write('length,sinuosity\n')
+        for row in range(len(self.Xcsv)):
+            filecsv.write(str(round(self.Xcsv[row],4))+','+str(round(self.Ycsv[row],4))+'\n')
+        filecsv.close()
+
 
 
 
