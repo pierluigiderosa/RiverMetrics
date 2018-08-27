@@ -28,7 +28,7 @@ repository=https://github.com/pierluigiderosa/RiverMetrics/
 # Tags are comma separated with spaces allowed
 tags=river, vector
 
-homepage=
+homepage=https://www.onegis.it/2018/08/27/rivermetrics/
 category=Plugins
 icon=icon_new.png
 # experimental flag
