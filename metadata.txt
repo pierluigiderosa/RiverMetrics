@@ -9,12 +9,12 @@
 [general]
 name=RiverMetrics
 qgisMinimumVersion=3.0
-description=description
-version=0.1
+description=calculate some river metrics
+version=0.3.0
 author=pierluigi de rosa
-email=pierluigi.derosa@gmail.com
+email=pierluigi.derosa@gmail.com (onegis.it)
 
-about=about here
+about=the plugin is developed by onegis.it
 
 tracker=https://github.com/pierluigiderosa/RiverMetrics/issues
 repository=https://github.com/pierluigiderosa/RiverMetrics/
