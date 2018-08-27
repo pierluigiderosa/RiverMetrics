@@ -20,18 +20,21 @@
  *                                                                         *
  ***************************************************************************/
 """
-from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, Qt
-from PyQt4.QtGui import QAction, QIcon
+from __future__ import absolute_import
+from builtins import object
+from qgis.PyQt.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, Qt
+from qgis.PyQt.QtWidgets import QAction
+from qgis.PyQt.QtGui import QIcon
 # Initialize Qt resources from file resources.py
-import resources
+from . import resources
 
 
 # Import the code for the DockWidget
-from river_metrics_dockwidget import RiverMetricsDockWidget
+from .river_metrics_dockwidget import RiverMetricsDockWidget
 import os.path
 
 
-class RiverMetrics:
+class RiverMetrics(object):
     """QGIS Plugin Implementation."""
 
     def __init__(self, iface):

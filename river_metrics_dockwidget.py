@@ -20,14 +20,17 @@
  *                                                                         *
  ***************************************************************************/
 """
+from __future__ import absolute_import
+from builtins import str
+from builtins import range
 
 import os
 
-from PyQt4 import QtGui, uic
-from PyQt4.QtCore import pyqtSignal
+from qgis.PyQt import QtGui, uic
+from qgis.PyQt.QtCore import pyqtSignal
 import sys
 
-from PyQt4.QtGui import QFileDialog
+from qgis.PyQt.QtWidgets import QFileDialog, QDockWidget, QPushButton,QVBoxLayout
 
 sys.path.append(os.path.dirname(__file__))
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -35,17 +38,17 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
 
 #FORM_CLASS, _ = uic.loadUiType(os.path.join(
 #    os.path.dirname(__file__), 'river_metrics_dockwidget_base.ui'))
-from qgis._core import QgsMapLayer,QGis
-from qgis._core import QgsMapLayerRegistry
-from tools import sinuosity,createMemLayer
+from qgis._core import QgsMapLayer,Qgis,QgsWkbTypes
+from qgis._core import QgsProject
+from .tools import sinuosity,createMemLayer
 
 # import mathplotlib libraries
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as NavigationToolbar
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib.pyplot as plt
 import tempfile
 
-class RiverMetricsDockWidget(QtGui.QDockWidget, FORM_CLASS):
+class RiverMetricsDockWidget(QDockWidget, FORM_CLASS):
 
     closingPlugin = pyqtSignal()
 
@@ -70,7 +73,7 @@ class RiverMetricsDockWidget(QtGui.QDockWidget, FORM_CLASS):
         self.figure = None
         self.breaks = [] # breaks of river axes
         self.line= None # line geometry
-        self.breakButton = QtGui.QPushButton('Add breaks')
+        self.breakButton = QPushButton('Add breaks')
         self.breakButton.setCheckable(True)
         self.Xcsv = None
         self.Ycsv = None
@@ -103,11 +106,12 @@ class RiverMetricsDockWidget(QtGui.QDockWidget, FORM_CLASS):
         self.validator.clear()
         """ Function to combos creation """
         self.vectorCombo.clear()
-        layers = QgsMapLayerRegistry.instance().mapLayers().values()
+        layers = list(QgsProject.instance().mapLayers().values())
         layerRasters = []
         layerVectors = []
         for layer in layers:
             if layer.type() == QgsMapLayer.VectorLayer:
+                layerVectors.append(layer.name())
                 self.vectorCombo.addItem(layer.name(), layer)
 
     def validateLayer(self):
@@ -120,7 +124,7 @@ class RiverMetricsDockWidget(QtGui.QDockWidget, FORM_CLASS):
         if not vlayer.isValid():
             self.message(vlayer.name()+' is not valid','red')
             self.validate_test=False
-        elif vlayer.geometryType() != QGis.Line:
+        elif vlayer.geometryType() != QgsWkbTypes.LineGeometry:
             self.message('your vector layer is not a Line','red')
             self.validate_test = False
         else:
@@ -177,7 +181,7 @@ class RiverMetricsDockWidget(QtGui.QDockWidget, FORM_CLASS):
                 self.line = the_geom
 
             #create a new empty QVboxLayout
-            self.layout = QtGui.QVBoxLayout()
+            self.layout = QVBoxLayout()
 
             #set the Qframe layout
             self.frame_for_plot.setLayout(self.layout)
@@ -238,10 +242,10 @@ class RiverMetricsDockWidget(QtGui.QDockWidget, FORM_CLASS):
         #self.message(str(vlayer.name())+'|'+str(the_geom.length())+'|'+str(self.breaks), 'red')
 
         ll1 = createMemLayer(the_geom, self.breaks)
-        QgsMapLayerRegistry.instance().addMapLayer(ll1)
+        QgsProject.instance().addMapLayer(ll1)
 
     def writeFile(self):
-        fileName = QFileDialog.getSaveFileName(self, 'Save CSV file',
+        fileName, __ = QFileDialog.getSaveFileName(self, 'Save CSV file',
                                                "", "CSV (*.csv);;All files (*)")
         fileName = os.path.splitext(str(fileName))[0] + '.csv'
         self.lineOutput.setText(fileName)

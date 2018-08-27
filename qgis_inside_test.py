@@ -1,8 +1,11 @@
+from builtins import str
+from builtins import range
+from qgis.core import QgsProject
 vlayer = QgsVectorLayer('/home/pierluigi/UNIVERSITA/frane_alveo_regione/pianure/elementi_morfo/topino/asse_alveo_topino.shp', 'asse_fiume', 'ogr')
 f = open('/tmp/workfile.csv', 'w')
 #QgsMapLayerRegistry.instance().addMapLayer(vlayer)
 from math import sqrt
-from PyQt4.QtCore import QVariant
+from qgis.PyQt.QtCore import QVariant
     
 def pointAtDist(geom,distance):
     length = geom.length()
@@ -61,8 +64,8 @@ punto20mila=line.interpolate(20000)
 def splitLine(line,ptInit,ptEnd):
     puntoInit = ptInit.asPoint()
     puntoEnd = ptEnd.asPoint()
-    sqrDistInit, minDistPointInit, afterVertexInit  = line.closestSegmentWithContext(puntoInit)
-    sqrDistEnd, minDistPointEnd, afterVertexEnd  = line.closestSegmentWithContext(puntoEnd)
+    sqrDistInit, minDistPointInit, afterVertexInit , leftOf = line.closestSegmentWithContext(puntoInit)
+    sqrDistEnd, minDistPointEnd, afterVertexEnd , leftOf  = line.closestSegmentWithContext(puntoEnd)
     #afterVertexEnd -=1
     pline = line.asPolyline()
     newPoints = []
@@ -77,7 +80,7 @@ def splitLine(line,ptInit,ptEnd):
     reachFeat.setGeometry(QgsGeometry.fromPolyline(newPoints))
     pr.addFeatures([reachFeat])
     reach.updateExtents()
-    QgsMapLayerRegistry.instance().addMapLayers([reach])
+    QgsProject.instance().addMapLayers([reach])
     
     
 def plottapunto(punto):
@@ -94,7 +97,7 @@ def plottapunto(punto):
     # update layer's extent when new features have been added
     # because change of extent in provider is not propagated to the layer
     vl.updateExtents()
-    QgsMapLayerRegistry.instance().addMapLayer(vl)
+    QgsProject.instance().addMapLayer(vl)
 
 plottapunto(punto10mila)
 

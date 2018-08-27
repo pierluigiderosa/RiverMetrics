@@ -20,11 +20,13 @@
  *                                                                         *
  ***************************************************************************/
 """
+from builtins import str
+from builtins import range
 from qgis._core import (QgsFeature, QgsGeometry,
-                        QgsVectorLayer, QgsMapLayerRegistry,
+                        QgsVectorLayer,
                         QgsField)
 from math import sqrt
-from PyQt4.QtCore import QVariant
+from qgis.PyQt.QtCore import QVariant
 
 
 def pointAtDist(geom, distance):
@@ -80,8 +82,8 @@ def sinuosity(geom, step, shift):
 def splitLine(line, ptInit, ptEnd):
     puntoInit = ptInit.asPoint()
     puntoEnd = ptEnd.asPoint()
-    sqrDistInit, minDistPointInit, afterVertexInit = line.closestSegmentWithContext(puntoInit)
-    sqrDistEnd, minDistPointEnd, afterVertexEnd = line.closestSegmentWithContext(puntoEnd)
+    sqrDistInit, minDistPointInit, afterVertexInit , leftOf = line.closestSegmentWithContext(puntoInit)
+    sqrDistEnd, minDistPointEnd, afterVertexEnd , leftOf = line.closestSegmentWithContext(puntoEnd)
     pline = line.asPolyline()
     newPoints = []
     newPoints.append(minDistPointInit)
