@@ -14,7 +14,7 @@ version=0.3.0
 author=pierluigi de rosa
 email=pierluigi.derosa@gmail.com (onegis.it)
 
-about=the plugin is developed by onegis.it
+about=The plugin allows to calculate the river sinuosity using a vectorline representing the river axis. The vector line of river axis mustcontain only one feature and the coordinate reference system must be not geographical (long-lat) type.
 
 tracker=https://github.com/pierluigiderosa/RiverMetrics/issues
 repository=https://github.com/pierluigiderosa/RiverMetrics/
