@@ -84,7 +84,10 @@ def splitLine(line, ptInit, ptEnd):
     puntoEnd = ptEnd.asPoint()
     sqrDistInit, minDistPointInit, afterVertexInit , leftOf = line.closestSegmentWithContext(puntoInit)
     sqrDistEnd, minDistPointEnd, afterVertexEnd , leftOf = line.closestSegmentWithContext(puntoEnd)
-    pline = line.asPolyline()
+    if line.isMultipart():
+        pline=line.asMultiPolyline()[0]
+    else:
+        pline = line.asPolyline()
     newPoints = []
     newPoints.append(minDistPointInit)
     for iter in range(afterVertexInit, afterVertexEnd):
@@ -120,9 +123,10 @@ def createMemLayer(line,breaksList):
         lenReach=bk[breack]-bk[breack-1]
         # add a feature
         fet = QgsFeature()
-        fet.setGeometry(QgsGeometry.fromPolyline(reach))
+        fet.setGeometry(QgsGeometry.fromPolylineXY(reach))
         fet.setAttributes([breack, lenReach/dist, str(lenReach)])
         pr.addFeatures([fet])
     #vl.updateExtents()
     vl.commitChanges()
     return vl
+

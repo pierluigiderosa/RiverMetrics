@@ -38,7 +38,7 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
 
 #FORM_CLASS, _ = uic.loadUiType(os.path.join(
 #    os.path.dirname(__file__), 'river_metrics_dockwidget_base.ui'))
-from qgis._core import QgsMapLayer,Qgis,QgsWkbTypes
+from qgis._core import QgsMapLayer,  QgsWkbTypes, QgsMapLayerProxyModel
 from qgis._core import QgsProject
 from .tools import sinuosity,createMemLayer
 
@@ -61,9 +61,12 @@ class RiverMetricsDockWidget(QDockWidget, FORM_CLASS):
         # http://qt-project.org/doc/qt-4.8/designer-using-a-ui-file.html
         # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
-        self.setup_gui()
+
+        # fill the layer combobox with vector layers
+        self.vectorCombo.setFilters(QgsMapLayerProxyModel.VectorLayer)
         self.validate.clicked.connect(self.validateLayer)
         self.graph.clicked.connect(self.graph_data)
+        #self.clear_graph.clicked.connect(self.clear_graph)
         #self.vectorCombo.currentIndexChanged.connect(self.setup_gui)
 
         #global variables
@@ -86,6 +89,11 @@ class RiverMetricsDockWidget(QDockWidget, FORM_CLASS):
         self.filecsvpath = os.path.splitext(str(self.filecsvtemp.name))[0] + '.csv'
         self.lineOutput.setText(self.filecsvpath)
 
+        #create container plot
+        self.setup_gui()
+
+
+
 
 
 
@@ -102,23 +110,33 @@ class RiverMetricsDockWidget(QDockWidget, FORM_CLASS):
 
 
     def setup_gui(self):
-        '''clear validator message'''
-        self.validator.clear()
-        """ Function to combos creation """
-        self.vectorCombo.clear()
-        layers = list(QgsProject.instance().mapLayers().values())
-        layerRasters = []
-        layerVectors = []
-        for layer in layers:
-            if layer.type() == QgsMapLayer.VectorLayer:
-                layerVectors.append(layer.name())
-                self.vectorCombo.addItem(layer.name(), layer)
+
+        #PLOT container
+        # a figure instance to plot on
+        self.figure = plt.figure()
+
+        # this is the Canvas Widget that displays the `figure`
+        # it takes the `figure` instance as a parameter to __init__
+        self.canvas = FigureCanvas(self.figure)
+
+        # this is the Navigation widget
+        # it takes the Canvas widget and a parent
+        self.toolbar = NavigationToolbar(self.canvas, self)
+
+        #  create a new empty QVboxLayout
+        self.layout = QVBoxLayout()
+        self.layout.addWidget(self.toolbar)
+        self.layout.addWidget(self.canvas)
+        self.layout.addWidget(self.breakButton)
+
+        # set the Qframe layout
+        self.frame_for_plot.setLayout(self.layout)  # si alla fine
+
 
     def validateLayer(self):
         self.validator.clear()
         self.validator.setStyleSheet('background-color: None')
-        index = self.vectorCombo.currentIndex()
-        vlayer = self.vectorCombo.itemData(index)
+        vlayer = self.vectorCombo.currentLayer()
 
 
         if not vlayer.isValid():
@@ -164,33 +182,21 @@ class RiverMetricsDockWidget(QDockWidget, FORM_CLASS):
                 child.widget().deleteLater()
 
     def graph_data(self):
-        if self.graphicState is True:
-            self.canvas = None
-            self.figure = None
-            self.clearLayout(self.layout)
+
+
         step = self.stepSpin.value()
         shif = self.shiftSpin.value()
         if self.validate_test == None:
             self.message('You have to validate your layers first','yellow')
         if self.validate_test == True:
-            index = self.vectorCombo.currentIndex()
-            vlayer = self.vectorCombo.itemData(index)
+            vlayer = self.vectorCombo.currentLayer()
             for feat in vlayer.getFeatures():
                 the_geom = feat.geometry()
                 x,y = sinuosity(the_geom,step ,shif)
                 self.line = the_geom
 
-            #create a new empty QVboxLayout
-            self.layout = QVBoxLayout()
-
-            #set the Qframe layout
-            self.frame_for_plot.setLayout(self.layout)
-            self.figure = plt.figure()
-            self.canvas = FigureCanvas(self.figure)
-            self.toolbar = NavigationToolbar(self.canvas, self)
-            self.layout.addWidget(self.canvas)
-            self.layout.addWidget(self.toolbar)
-            self.layout.addWidget(self.breakButton)
+            self.figure.clear()
+            # create an axis
             ax = self.figure.add_subplot(111)
             ax.plot(x, y, 'bo', x, y, 'k')
             self.Xcsv = x
@@ -201,7 +207,9 @@ class RiverMetricsDockWidget(QDockWidget, FORM_CLASS):
             #if breakButton.isChecked():
             #       figure.canvas.mpl_connect('button_press_event', OnClick)
 
-            self.canvas.show()
+            #TODO: debug
+            #self.canvas.show()
+            self.canvas.draw()
             #set variable graphState to true to remember graph is plotted
             self.graphicState=True
 
@@ -234,8 +242,7 @@ class RiverMetricsDockWidget(QDockWidget, FORM_CLASS):
 
     def final(self):
 
-        index = self.vectorCombo.currentIndex()
-        vlayer = self.vectorCombo.itemData(index)
+        vlayer = self.vectorCombo.currentLayer()
         for feat in vlayer.getFeatures():
             the_geom = feat.geometry()
         #TODO: remove the line for debigging
@@ -257,6 +264,8 @@ class RiverMetricsDockWidget(QDockWidget, FORM_CLASS):
             filecsv.write(str(round(self.Xcsv[row],4))+','+str(round(self.Ycsv[row],4))+'\n')
         filecsv.close()
 
+    def clear_graph(self):
+        self.figure.clear()
 
 
 
