@@ -199,7 +199,7 @@ class RiverMetricsDockWidget(QDockWidget, FORM_CLASS):
 
             #def addVline():
             #if breakButton.isChecked():
-             #       figure.canvas.mpl_connect('button_press_event', OnClick)
+            #       figure.canvas.mpl_connect('button_press_event', OnClick)
 
             self.canvas.show()
             #set variable graphState to true to remember graph is plotted
