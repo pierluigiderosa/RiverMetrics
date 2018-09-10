@@ -63,10 +63,11 @@ class RiverMetricsDockWidget(QDockWidget, FORM_CLASS):
         self.setupUi(self)
 
         # fill the layer combobox with vector layers
-        self.vectorCombo.setFilters(QgsMapLayerProxyModel.VectorLayer)
+        self.vectorCombo.setFilters(QgsMapLayerProxyModel.LineLayer)
         self.validate.clicked.connect(self.validateLayer)
         self.graph.clicked.connect(self.graph_data)
-        #self.clear_graph.clicked.connect(self.clear_graph)
+
+        self.clear_graph.clicked.connect(self.do_clear_graph)
         #self.vectorCombo.currentIndexChanged.connect(self.setup_gui)
 
         #global variables
@@ -264,8 +265,9 @@ class RiverMetricsDockWidget(QDockWidget, FORM_CLASS):
             filecsv.write(str(round(self.Xcsv[row],4))+','+str(round(self.Ycsv[row],4))+'\n')
         filecsv.close()
 
-    def clear_graph(self):
+    def do_clear_graph(self):
         self.figure.clear()
+        self.canvas.draw()
 
 
 

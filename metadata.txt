@@ -10,7 +10,7 @@
 name=RiverMetrics
 qgisMinimumVersion=3.0
 description=The plugin allows to calculate the river sinuosity using a vectorline representing the river axis. The vector line of river axis mustcontain only one feature and the coordinate reference system must be not geographical (long-lat) type.
-version=0.3.0
+version=0.3.1
 author=pierluigi de rosa
 email=pierluigi.derosa@gmail.com (onegis.it)
 
@@ -23,7 +23,11 @@ repository=https://github.com/pierluigiderosa/RiverMetrics/
 # Recommended items:
 
 # Uncomment the following line and add your changelog:
-# changelog=
+changelog=
+  0.3.1
+  - fixed the UI
+  0.3.0
+  - porting to the QGIS version 3.xs
 
 # Tags are comma separated with spaces allowed
 tags=river, vector
