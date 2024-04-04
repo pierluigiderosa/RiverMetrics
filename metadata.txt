@@ -4,13 +4,13 @@
 
 [general]
 name=River Metrics
-qgisMinimumVersion=3.4
-description=The plugin allows to calculate the river metrcics
-version=1
+qgisMinimumVersion=3.8
+description=The plugin allows to calculate the river metrics
+version=1.2
 author=Pierluigi De Rosa e Andrea Fredduzzi
 email=pierluigi.derosa@gmail.com
 
-about=The plugin allows to calculate the river sinuosity using a vectorline representing the river axis. The vector line of river axis mustcontain only one feature and the coordinate reference system must be not geographical (long-lat) type. The plugin check this conditions by the validate geom button.
+about=The plugin allows to calculate the river sinuosity and river braiding index using a vectorline representing the river axis and a polygon layer representin the wet channel. The vector line of river axis must contain only one feature and the coordinate reference system must be not geographical (long-lat) type. The plugin check this conditions by the validate geom button.
 
 tracker=https://github.com/pierluigiderosa/RiverMetrics/issues
 repository=https://github.com/pierluigiderosa/RiverMetrics
@@ -20,7 +20,7 @@ repository=https://github.com/pierluigiderosa/RiverMetrics
 
 hasProcessingProvider=no
 # Uncomment the following line and add your changelog:
-# changelog=
+# changelog= added braiding index determination
 
 # Tags are comma separated with spaces allowed
 tags=python

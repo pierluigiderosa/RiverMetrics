@@ -177,7 +177,7 @@ def createBradingLayer (line,breaksList,X,Y,crs=None):
     pr = vl.dataProvider()
     # add fields
     pr.addAttributes([
-        QgsField("reach", QVariant.String),
+        QgsField("reach", QVariant.Int),
                       QgsField("braiding", QVariant.Double),
                       QgsField("Length", QVariant.Double)])
     vl.updateFields()
@@ -210,7 +210,7 @@ def createBradingLayer (line,breaksList,X,Y,crs=None):
         fet = QgsFeature()
         the_geom = QgsGeometry.fromPolylineXY(reach)
         fet.setGeometry(the_geom)
-        fet.setAttributes([ str(breakval),   brIndex,  lenReach])
+        fet.setAttributes([ breakval,   brIndex,  lenReach])
         print(f"{breakval}+{fet.isValid()=}")
         # pr.addFeature(fet)
         # vl.updateExtents()
