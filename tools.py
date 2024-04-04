@@ -5,9 +5,9 @@
                                  A QGIS plugin
  description
                               -------------------
-        begin                : 2017-01-09
+        begin                : 2024-02-24
         git sha              : $Format:%H$
-        copyright            : (C) 2017 by pierluigi de rosa
+        copyright            : (C) 2024 by pierluigi de rosa
         email                : pierluigi.derosa@gmail.com
  ***************************************************************************/
 
@@ -27,7 +27,7 @@ from qgis._core import (QgsFeature, QgsGeometry,
                         QgsField)
 from math import sqrt
 from qgis.PyQt.QtCore import QVariant
-
+import pandas as pd
 
 def pointAtDist(geom, distance):
     length = geom.length()
@@ -44,7 +44,43 @@ def qgisdist(point1, point2):
     return sqrt(point1.sqrDist(point2))
 
 
+def bradingIndex(XSlayer, channel, step, win_size):
+    X = []
+    Y = []
 
+    Xval = []
+    Yval = []
+
+    for XSfeat in XSlayer.getFeatures():
+        the_geom = XSfeat.geometry()
+        request = the_geom.boundingBox()
+        for f in channel.getFeatures(request):
+            poly_geom = f.geometry()
+            if poly_geom.intersects(the_geom):
+                intersezione = the_geom.intersection(poly_geom)
+                if intersezione.isMultipart():
+                    chann = intersezione.asMultiPolyline()
+                    nchann = len(chann)
+                else:
+                    chann = intersezione.asPolyline()
+                    nchann = len(chann) / 2
+                Xval.append(float(XSfeat['distance']))
+                Yval.append(nchann)
+
+        # determino la dimensione della finestra mobile
+    window_size = int(win_size / step)
+
+    if len(Yval) <= window_size:
+        X.append(Xval)
+        Y.append(sum(Yval) / len(Yval))
+    for i in range(len(Yval) - window_size + 1):
+        sublist = Yval[i:i + window_size]
+        sub_prog = Xval[i:i + window_size]
+        ampiezza = max(sub_prog) - min(sub_prog)
+        X.append(min(sub_prog) + ampiezza / 2)
+        Y.append(sum(sublist) / len(sublist))
+
+    return X, Y
 
 def sinuosity(geom, step, shift):
     '''
@@ -97,13 +133,14 @@ def splitLine(line, ptInit, ptEnd):
 
 
 
-def createMemLayer(line,breaksList):
+def createMemLayer(line,breaksList,crs=None):
     '''
     create memory layer storing all reaches
     :return:
     '''
     # create layer
     vl = QgsVectorLayer("LineString", "sinuosity_river", "memory")
+    vl.setCrs(crs)
     pr = vl.dataProvider()
     # add fields
     pr.addAttributes([QgsField("reach", QVariant.Int),
@@ -130,3 +167,65 @@ def createMemLayer(line,breaksList):
     vl.commitChanges()
     return vl
 
+def createBradingLayer (line,breaksList,X,Y,crs=None):
+    '''
+        create memory layer storing all reaches for braiding index
+        :return:
+        '''
+    vl = QgsVectorLayer("LineString", "braiding_river", "memory")
+    vl.setCrs(crs)
+    pr = vl.dataProvider()
+    # add fields
+    pr.addAttributes([
+        QgsField("reach", QVariant.String),
+                      QgsField("braiding", QVariant.Double),
+                      QgsField("Length", QVariant.Double)])
+    vl.updateFields()
+    print(f"{vl.isValid()=}")
+    feat_list = []
+    reach_list = []
+    attr_list=[]
+
+
+    breaksList.append(0)
+    breaksList.append(line.length())
+    bk = sorted(breaksList)
+
+    df = pd.DataFrame()
+    df["stationing"] = X  ## assegno i valori alle colonne tramite liste
+    df["nchann"] = Y
+    df['id'] = None
+    for breakval in range(len(bk) - 1):
+
+        ptInt = line.interpolate(bk[breakval])
+        ptFin = line.interpolate(bk[breakval+1])
+        reach = splitLine(line, ptInt, ptFin)
+        # pippo
+
+        df['id'][(df["stationing"] >= bk[breakval]) & (df["stationing"] < bk[breakval + 1])] = breakval
+        sel = df[(df["stationing"] >= bk[breakval]) & (df["stationing"] < bk[breakval + 1])]
+        brIndex = float(sel['nchann'].mean())
+        lenReach = float(bk[breakval+1] - bk[breakval])
+        # add a feature
+        fet = QgsFeature()
+        the_geom = QgsGeometry.fromPolylineXY(reach)
+        fet.setGeometry(the_geom)
+        fet.setAttributes([ str(breakval),   brIndex,  lenReach])
+        print(f"{breakval}+{fet.isValid()=}")
+        # pr.addFeature(fet)
+        # vl.updateExtents()
+        print(breakval, brIndex, lenReach,sep='-')
+        feat_list.append(fet)
+        reach_list.append(reach)
+        attr_list.append([ str(breakval),  brIndex, lenReach])
+
+
+
+    # vl.commitChanges()
+
+    (result, newFeatures) = pr.addFeatures(feat_list)
+
+    print(f"{result=}")
+    print(newFeatures)
+
+    return vl
