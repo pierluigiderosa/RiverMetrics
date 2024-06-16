@@ -96,7 +96,13 @@ def create_XS_secs(layer, step=1000, sez_length=1000):
             line = elem.geometry()
             line_length = 0
             currentDistance = step
-            for seg_start, seg_end in paires(line.asPolyline()):
+
+            if line.isMultipart():
+                iterator = line.asMultiPolyline()[0]
+            else:
+                iterator = line.asPolyline()
+
+            for seg_start, seg_end in paires(iterator):
                 line_start = QgsPoint(seg_start)
                 line_end = QgsPoint(seg_end)
                 pointm = diff(line_end, line_start)

@@ -22,8 +22,8 @@
 """
 from builtins import str
 from builtins import range
-from qgis._core import (QgsFeature, QgsGeometry,
-                        QgsVectorLayer,
+from qgis._core import (QgsFeature, QgsGeometry,QgsProject,
+                        QgsVectorLayer,QgsPointXY,
                         QgsField)
 from math import sqrt
 from qgis.PyQt.QtCore import QVariant
@@ -229,3 +229,75 @@ def createBradingLayer (line,breaksList,X,Y,crs=None):
     print(newFeatures)
 
     return vl
+
+
+def createProfileLayer(XSlayer,raster_layer,step_size,distance_step):
+
+    Xprof=list()
+    Yprof=list()
+
+    # Creation of new memory layer to store min point along cross sections
+    point_layer_min = QgsVectorLayer("Point?crs=" + XSlayer.crs().authid(), "minimum_point-"+str(distance_step), "memory")
+    provider_min = point_layer_min.dataProvider()
+    provider_min.addAttributes([
+        QgsField("distance", QVariant.Double),
+        QgsField("raster_value", QVariant.Double),
+        QgsField("id_linea", QVariant.Int)
+    ])
+
+    # Avvia l'editing del layer
+    point_layer_min.startEditing()
+
+    # Itera sulle feature del layer vettoriale di linee
+    for feature in XSlayer.getFeatures():
+        # Lista per tenere traccia dei valori campionati
+        valori_raster = []
+
+        # Estrai la geometria della linea
+        line_geometry = feature.geometry()
+
+        # Calcola la lunghezza totale della linea
+        total_length = line_geometry.length()
+
+        # Inizia a generare i punti lungo la linea fino alla sua lunghezza totale
+        distance_along_line = 0
+        while distance_along_line < total_length:
+            # Ottieni il punto sulla linea
+            point = line_geometry.interpolate(distance_along_line)
+
+            # Campiona il valore del raster al punto
+            X = point.asPoint().x()
+            Y = point.asPoint().y()
+            ppt = QgsPointXY(X, Y)
+            valueDTM, res = raster_layer.dataProvider().sample(ppt, 1)
+            valori_raster.append((valueDTM, point))
+
+            # Aggiorna la distanza lungo la linea
+            distance_along_line += step_size
+
+        # Trova la tupla con il valore numerico minimo
+        minimum_value, minimum_point = min(valori_raster, key=lambda x: x[0])
+
+        # Crea una nuova feature punto minimo
+        point_featureMin = QgsFeature()
+        point_featureMin.setGeometry(minimum_point)
+        point_featureMin.setAttributes([feature['distance'],minimum_value, feature.id()])
+
+        # save data for plot
+        Xprof.append(feature['distance'])
+        Yprof.append(minimum_value)
+
+        # Aggiungi la feature punto al layer
+        provider_min.addFeature(point_featureMin)
+
+        # Stampa il risultato
+        # print("\nValore minimo e punto corrispondente:")
+        # print(f"Valore minimo: {valore_minimo}, Punto corrispondente: {minimum_point}")
+
+    # Fine editing del layer
+    point_layer_min.commitChanges()
+
+    # Aggiungi il layer al progetto
+    QgsProject.instance().addMapLayer(point_layer_min)
+
+    return Xprof,Yprof

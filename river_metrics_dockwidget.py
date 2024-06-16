@@ -33,9 +33,10 @@ from PyQt5.QtWidgets import QMainWindow, QDockWidget
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'river_metrics_dockwidget_base.ui'))
 
-from qgis._core import QgsMapLayer,  QgsWkbTypes, QgsMapLayerProxyModel
+from qgis._core import QgsMapLayer,  QgsWkbTypes, QgsMapLayerProxyModel,QgsVectorLayer
 from qgis._core import QgsProject
-from .tools import sinuosity,createMemLayer,bradingIndex,createBradingLayer
+from .tools import sinuosity,createMemLayer,\
+    bradingIndex,createBradingLayer,createProfileLayer
 from .transect.XSGenerator import create_XS_secs
 
 # import mathplotlib libraries
@@ -60,7 +61,8 @@ class RiverMetricsDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         # LINK segnale toggled ai rispettivi slot
         self.sinuosityRadio.toggled.connect(self.onRadioToggled)
-        self.profilesRadio.toggled.connect(self.onRadioToggled)
+        self.braidingRadio.toggled.connect(self.onRadioToggled)
+        self.profileRadio.toggled.connect(self.onRadioToggled)
 
         # Set sinuosityRadio already activate on startup
         self.sinuosityRadio.setChecked(True)
@@ -68,15 +70,20 @@ class RiverMetricsDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # fill the layer combobox with vector layers
         self.vectorCombo.setFilters(QgsMapLayerProxyModel.LineLayer)
         self.RiverLayerComboBox.setFilters(QgsMapLayerProxyModel.LineLayer)
+        self.RiverLayerComboBox_2.setFilters(QgsMapLayerProxyModel.LineLayer)
+        self.DEMLayerComboBox.setFilters(QgsMapLayerProxyModel.RasterLayer)
+
         self.validate.clicked.connect(self.validateLayer)
         self.validateBraiding.clicked.connect(self.validateLayerOtherIndex)
         self.graph.clicked.connect(self.graph_data)
         self.braidingGraph.clicked.connect(self.graph_braiding)
         self.transectButton.clicked.connect(self.transect)
+        self.XS_Button.clicked.connect(self.talwegXS)
         
 
         self.clear_graph.clicked.connect(self.do_clear_graph)
         self.clear_graph1.clicked.connect(self.do_clear_graph1)
+        self.clear_graph2.clicked.connect(self.do_clear_graph2)
         # self.vectorCombo.currentIndexChanged.connect(self.setup_gui)
 
         # global variables
@@ -89,18 +96,23 @@ class RiverMetricsDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.figure1 = None
         self.breaks = []  # breaks of river axes in sinuosity
         self.breaks1 = []  # breaks of river axes in braiding
+        self.breaks2 = []  # breaks of profile river axes
         self.line = None  # line geometry
         self.breakButton = QPushButton('Add breaks sinuosity')
         self.breakButton.setCheckable(True)
         self.breakButton1 = QPushButton('Add breaks braiding')
         self.breakButton1.setCheckable(True)
+        self.breakButton2 = QPushButton('Add breaks profile')
+        self.breakButton2.setCheckable(True)
         self.Xcsv = None
         self.Ycsv = None
         self.layerXS = None
+        self.layerXSprofile = None
         self.X = None #variable for stationing XS
         self.Y = None #variable for nchannel in XS
         self.breakButton.clicked.connect(self.addBreaks)
         self.breakButton1.clicked.connect(self.addBreaks1)
+        self.breakButton2.clicked.connect(self.addBreaks2)
         self.browseBtn.clicked.connect(self.writeFile)
 
 
@@ -124,7 +136,13 @@ class RiverMetricsDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         sender = self.sender()
 
         # Ottieni l'indice della pagina associata al radio button
-        index = 0 if sender == self.sinuosityRadio else 1
+        if sender == self.sinuosityRadio:
+            index = 0
+        elif sender == self.braidingRadio:
+            index = 1
+        elif sender == self.profileRadio:  # Aggiunta per gestire il terzo radio button
+            index = 2
+
 
         # Mostra la pagina corrispondente nello stacked widget
         self.stackedWidget.setCurrentIndex(index)
@@ -135,16 +153,19 @@ class RiverMetricsDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # a figure instance to plot on
         self.figure = plt.figure()
         self.figure1 = plt.figure()
+        self.figure2 = plt.figure()
 
         # this is the Canvas Widget that displays the `figure`
         # it takes the `figure` instance as a parameter to __init__
         self.canvas = FigureCanvas(self.figure)
         self.canvas1 = FigureCanvas(self.figure1)
+        self.canvas2 = FigureCanvas(self.figure2)
 
         # this is the Navigation widget
         # it takes the Canvas widget and a parent
         self.toolbar = NavigationToolbar(self.canvas, self)
         self.toolbar1 = NavigationToolbar(self.canvas, self)
+        self.toolbar2 = NavigationToolbar(self.canvas, self)
 
         #  create a new empty QVboxLayout
         self.layout = QVBoxLayout()
@@ -157,9 +178,15 @@ class RiverMetricsDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.layout1.addWidget(self.canvas1)
         self.layout1.addWidget(self.breakButton1)
 
+        self.layout2 = QVBoxLayout()
+        self.layout2.addWidget(self.toolbar2)
+        self.layout2.addWidget(self.canvas2)
+        self.layout2.addWidget(self.breakButton2)
+
         # set the Qframe layout
         self.frame_for_plot.setLayout(self.layout)
         self.frame_for_plot_2.setLayout(self.layout1)
+        self.frame_for_plot3.setLayout(self.layout2)
 
 
     def validateLayerOtherIndex(self):
@@ -388,6 +415,34 @@ class RiverMetricsDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         else:
             self.message('You have to graph your data first','yellow', self.validatorBraing)
 
+    def addBreaks2(self):
+
+        def OnClick(event2):
+            # ax=self.figure.add_subplot(111)
+            # Ottieni le coordinate x e y del punto cliccato
+            x_clicked = event2.xdata
+            y_clicked = event2.ydata
+            self.ax2.axvline(int(x_clicked),linewidth=4, color='r')
+            # Stampa le coordinate x e y
+            print(f'Coordinate cliccate: x={x_clicked}, y={y_clicked}')
+            self.canvas2.draw()
+            self.breaks2.append(float(event2.xdata))
+
+        if self.graphicState is True:
+            if self.breakButton2.isChecked():
+                self.breakButton2.setText('stop-break')
+                self.cid2 = self.figure2.canvas.mpl_connect('button_press_event', OnClick)
+
+            else:
+                self.breakButton2.setText('Add Break')
+                self.figure2.canvas.mpl_disconnect(self.cid2)
+                # self.finalBraiding() -- TODO: mettere qui la suddivisione
+                print('onClick', self.breaks2 )
+                # ll1 = createMemLayer(self.line, self.breaks)
+                # QgsMapLayerRegistry.instance().addMapLayers([ll1])
+        else:
+            self.message('You have to graph your data first','yellow', self.validatorBraing)
+
 
     def writeFile(self):
         fileName, __ = QFileDialog.getSaveFileName(self, 'Save CSV file',
@@ -417,6 +472,11 @@ class RiverMetricsDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.figure1.clear()
         self.canvas1.draw()
         self.breaks1 = []
+    def do_clear_graph2(self):
+        # clear graph brading
+        self.figure2.clear()
+        self.canvas2.draw()
+        self.breaks2 = []
 
 
 
@@ -428,3 +488,40 @@ class RiverMetricsDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         QgsProject.instance().addMapLayer(sections)
         self.XSgenerated = True
         self.layerXS=sections
+
+    def talwegXS(self):
+        step = self.stepSpinXS_2.value()
+        XS_Len = self.sectionSpinXS_2.value()
+        DEM_layer = self.DEMLayerComboBox.currentLayer()
+        river_axes = self.RiverLayerComboBox_2.currentLayer()
+        pt_mid, sections = create_XS_secs(river_axes, step=step, sez_length=XS_Len)
+        QgsProject.instance().addMapLayer(sections)
+        self.XSgenerated = True
+        self.layerXSprofile = sections
+
+        # get raster resolution
+        if DEM_layer.isValid():
+            # Ottieni la risoluzione del raster
+            x_resolution = DEM_layer.rasterUnitsPerPixelX()
+            y_resolution = DEM_layer.rasterUnitsPerPixelY()
+            resolution = int((x_resolution+y_resolution)/2)
+            # set resolution to 1 in caso equal to zero
+            if resolution == 0:
+                resolution = 1
+
+            if self.XSgenerated:
+                self.Xprof, self.Yprof = createProfileLayer(self.layerXSprofile,DEM_layer,resolution,step)
+
+                self.figure2.clear()
+                self.ax2 = self.figure2.add_subplot(111)
+                self.ax2.plot(self.Xprof, self.Yprof, 'b')
+                # debug
+                # print('out',X,Y,sep='-')
+                self.canvas2.draw()
+
+                # set variable graphState to true to remember graph is plotted
+                self.graphicState = True
+
+            else:
+                self.message('Cross section missing', 'red', self.validatorProfile)
+
