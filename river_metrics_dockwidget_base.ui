@@ -576,12 +576,12 @@ p, li { white-space: pre-wrap; }
          <widget class="QFrame" name="frame_for_plot3">
           <property name="minimumSize">
            <size>
-            <width>0</width>
+            <width>20</width>
             <height>40</height>
            </size>
           </property>
           <property name="frameShape">
-           <enum>QFrame::StyledPanel</enum>
+           <enum>QFrame::NoFrame</enum>
           </property>
           <property name="frameShadow">
            <enum>QFrame::Raised</enum>

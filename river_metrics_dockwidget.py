@@ -36,7 +36,7 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
 from qgis._core import QgsMapLayer,  QgsWkbTypes, QgsMapLayerProxyModel,QgsVectorLayer
 from qgis._core import QgsProject
 from .tools import sinuosity,createMemLayer,\
-    bradingIndex,createBradingLayer,createProfileLayer
+    bradingIndex,createBradingLayer,createProfileLayer,createProfileReach
 from .transect.XSGenerator import create_XS_secs
 
 # import mathplotlib libraries
@@ -360,6 +360,16 @@ class RiverMetricsDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         ll2 = createBradingLayer(the_geom, self.breaks1,self.X,self.Y, crsSinuosity)
         QgsProject.instance().addMapLayer(ll2)
 
+    def finalProfile(self):
+        vlayer = self.RiverLayerComboBox_2.currentLayer()
+        for feat in vlayer.getFeatures():
+            the_geom = feat.geometry()
+        crsProfile = vlayer.crs()
+        ll3 =createProfileReach(the_geom,
+                                self.breaks2,
+                                self.DEMLayerComboBox.currentLayer(),
+                                crsProfile)
+        QgsProject.instance().addMapLayer(ll3)
 
     def graph_braiding(self):
         vlayer = self.layerXS
@@ -436,7 +446,7 @@ class RiverMetricsDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             else:
                 self.breakButton2.setText('Add Break')
                 self.figure2.canvas.mpl_disconnect(self.cid2)
-                # self.finalBraiding() -- TODO: mettere qui la suddivisione
+                self.finalProfile()
                 print('onClick', self.breaks2 )
                 # ll1 = createMemLayer(self.line, self.breaks)
                 # QgsMapLayerRegistry.instance().addMapLayers([ll1])
@@ -510,7 +520,7 @@ class RiverMetricsDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 resolution = 1
 
             if self.XSgenerated:
-                self.Xprof, self.Yprof = createProfileLayer(self.layerXSprofile,DEM_layer,resolution,step)
+                self.Xprof, self.Yprof, self.CrossSection = createProfileLayer(self.layerXSprofile,DEM_layer,resolution,step)
 
                 self.figure2.clear()
                 self.ax2 = self.figure2.add_subplot(111)

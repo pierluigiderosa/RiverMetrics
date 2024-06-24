@@ -231,6 +231,60 @@ def createBradingLayer (line,breaksList,X,Y,crs=None):
     return vl
 
 
+def createProfileReach(line, breaksList, raster_layer, crs=None):
+    vl = QgsVectorLayer("LineString", "river_profile", "memory")
+    vl.setCrs(crs)
+    pr = vl.dataProvider()
+    # add fields
+    pr.addAttributes([
+        QgsField("Lenght", QVariant.Double),
+        QgsField("Slope", QVariant.Double)])
+    vl.updateFields()
+
+    # print(f"{vl.isValid()=}")
+    feat_list = []
+
+    breaksList.append(0)
+    breaksList.append(line.length())
+    bk = sorted(breaksList)
+    print(bk)
+
+    for breakval in range(len(bk) - 1):
+        ptInt = line.interpolate(bk[breakval])
+        ptFin = line.interpolate(bk[breakval + 1])
+        reach = splitLine(line, ptInt, ptFin)
+
+        lenReach = float(bk[breakval + 1] - bk[breakval])
+
+        # Campiona il valore del raster al punto
+        X = ptInt.asPoint().x()
+        Y = ptInt.asPoint().y()
+        ppt = QgsPointXY(X, Y)
+        valueDTMinit, res = raster_layer.dataProvider().sample(ppt, 1)
+        X = ptFin.asPoint().x()
+        Y = ptFin.asPoint().y()
+        ppt = QgsPointXY(X, Y)
+        valueDTMfin, res = raster_layer.dataProvider().sample(ppt, 1)
+        # print("len reach:", f"{lenReach}", "difference:", f"{valueDTMinit - valueDTMfin}")
+
+        # add a feature
+        fet = QgsFeature()
+        the_geom = QgsGeometry.fromPolylineXY(reach)
+        fet.setGeometry(the_geom)
+        slope=(valueDTMinit - valueDTMfin)/lenReach
+        fet.setAttributes([lenReach, slope])
+        feat_list.append(fet)
+        # print(f"{breakval}+{fet.isValid()=}")
+
+    (result, newFeatures) = pr.addFeatures(feat_list)
+
+    print(f"{result=}")
+    # print(newFeatures)
+
+    return vl
+
+
+
 def createProfileLayer(XSlayer,raster_layer,step_size,distance_step):
 
     Xprof=list()
@@ -300,4 +354,4 @@ def createProfileLayer(XSlayer,raster_layer,step_size,distance_step):
     # Aggiungi il layer al progetto
     QgsProject.instance().addMapLayer(point_layer_min)
 
-    return Xprof,Yprof
+    return Xprof,Yprof,point_layer_min
