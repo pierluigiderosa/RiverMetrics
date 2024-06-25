@@ -20,7 +20,8 @@ repository=https://github.com/pierluigiderosa/RiverMetrics
 
 hasProcessingProvider=no
 # Uncomment the following line and add your changelog:
-# changelog= added braiding index determination
+changelog= - added profile index determination
+           - added braiding index determination
 
 # Tags are comma separated with spaces allowed
 tags=python
