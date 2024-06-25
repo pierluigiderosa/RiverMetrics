@@ -22,6 +22,7 @@ hasProcessingProvider=no
 # Uncomment the following line and add your changelog:
 changelog= - added profile index determination
            - added braiding index determination
+           -
 
 # Tags are comma separated with spaces allowed
 tags=python
